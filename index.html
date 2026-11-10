@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SHIFT —ふたつの世界— | Game Off 2026</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: #1a1a2e; color: #eee; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 8px; overflow: hidden;
+  }
+  #wrap { width: min(960px, 100%); }
+  #hud {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 6px 10px; background: #23233d; border-radius: 10px 10px 0 0;
+    font-size: 15px; font-weight: bold; flex-wrap: wrap;
+  }
+  #hud .world { padding: 2px 10px; border-radius: 999px; background: #f5f0dc; color: #333; transition: background .2s, color .2s; }
+  #hud .world.dark { background: #22223a; color: #ffd75e; border: 1px solid #ffd75e; }
+  #hud button { background: #3a3a5e; color: #eee; border: 1px solid #555; border-radius: 6px; padding: 3px 10px; font-size: 14px; cursor: pointer; }
+  #hud button:hover { background: #4a4a72; }
+  #stage { position: relative; width: 100%; }
+  canvas { display: block; width: 100%; height: auto; background: #f5f0dc; border-radius: 0 0 10px 10px; touch-action: none; }
+  .overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; background: rgba(20, 20, 40, 0.82); border-radius: 0 0 10px 10px; z-index: 5; padding: 16px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 { font-size: min(44px, 8vw); letter-spacing: 4px; margin-bottom: 4px; }
+  .overlay h1 .s1 { color: #ffd75e; } .overlay h1 .s2 { color: #6ec6ff; }
+  .overlay h2 { font-size: min(30px, 6vw); margin-bottom: 8px; }
+  .overlay p { font-size: min(16px, 4vw); line-height: 1.7; margin-bottom: 6px; }
+  .overlay .keys { font-size: 14px; background: rgba(255,255,255,.08); border-radius: 8px; padding: 8px 14px; margin: 8px 0; line-height: 1.9; }
+  .overlay .keys b { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; margin: 0 2px; font-size: 13px; }
+  .bigbtn {
+    margin-top: 10px; font-size: 20px; font-weight: bold; padding: 12px 34px; border: none; border-radius: 999px;
+    background: linear-gradient(135deg, #ffd75e, #ff9f43); color: #222; cursor: pointer;
+    box-shadow: 0 4px 0 #b96a00; transition: transform .05s;
+  }
+  .bigbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 #b96a00; }
+  .bigbtn.blue { background: linear-gradient(135deg, #6ec6ff, #4a7dff); color: #fff; box-shadow: 0 4px 0 #274b9f; }
+  .bigbtn.blue:active { box-shadow: 0 1px 0 #274b9f; }
+  .setrow { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: min(420px, 92%); padding: 8px 4px; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .setrow .seg { display: flex; gap: 6px; }
+  .setrow .seg button { background: #3a3a5e; color: #eee; border: 1px solid #555; border-radius: 6px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+  .setrow .seg button.on { background: #ffd75e; color: #222; border-color: #ffd75e; font-weight: bold; }
+  .setrow input[type="checkbox"] { width: 20px; height: 20px; accent-color: #ffd75e; cursor: pointer; }
+  #touch { display: none; margin-top: 8px; justify-content: space-between; align-items: center; }
+  #touch .group { display: flex; gap: 10px; }
+  .tbtn {
+    width: 62px; height: 62px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35);
+    background: rgba(255,255,255,.12); color: #fff; font-size: 24px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center; user-select: none; touch-action: none;
+  }
+  .tbtn.wide { width: 92px; border-radius: 32px; font-size: 17px; background: rgba(255,215,94,.25); border-color: #ffd75e; }
+  .tbtn:active { background: rgba(255,255,255,.3); }
+  @media (pointer: coarse) { #touch { display: flex; } }
+  body.touch-on #touch { display: flex; }
+  body.touch-off #touch { display: none; }
+  #foot { margin-top: 6px; font-size: 12px; color: #888; text-align: center; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <span id="hudLevel">LEVEL 1</span>
+    <span id="hudWorld" class="world">☀ 白の世界</span>
+    <span id="hudCoins">🪙 0 / 7</span>
+    <span id="hudDeaths">💀 0</span>
+    <span id="hudTime">⏱ 0:00</span>
+    <span>
+      <button id="muteBtn" type="button">🔊 音あり</button>
+      <button id="pauseBtn" type="button">⏸ ポーズ</button>
+      <button id="setBtn" type="button">⚙ 設定</button>
+    </span>
+  </div>
+  <div id="stage">
+    <canvas id="cv" width="960" height="520"></canvas>
+
+    <div id="titleOv" class="overlay">
+      <h1><span class="s1">SHIFT</span> <span class="s2">—ふたつの世界—</span></h1>
+      <p>白の世界と黒の世界。同じ場所に、違う足場がある。<br>世界を切り替えて、旗を目指そう。</p>
+      <div class="keys">
+        <b>←</b><b>→</b> / <b>A</b><b>D</b> 移動　　<b>↑</b> / <b>Space</b> ジャンプ<br>
+        <b>Shift</b> / <b>X</b> 世界を切り替える　　<b>P</b> ポーズ　<b>R</b> やり直し<br>
+        <b>Shift長押し</b>（🟪紫のブロックの上）重力が逆転する
+      </div>
+      <p>🟨 黄色の足場は白の世界だけ、🟦 青の足場は黒の世界だけにあるよ。<br>🟧 オレンジのリフトは、世界を切り替えると上下に動くよ。🔺 トゲに触れたらミス。<br>半透明の足場は、もう片方の世界のものだよ。</p>
+      <button id="startBtn" class="bigbtn" type="button">▶ はじめる</button>
+    </div>
+
+    <div id="clearOv" class="overlay hidden">
+      <h2 id="clearTitle">🎉 クリア！</h2>
+      <p id="clearText"></p>
+      <button id="nextBtn" class="bigbtn blue" type="button">次のレベルへ ▶</button>
+    </div>
+
+    <div id="endOv" class="overlay hidden">
+      <h2>🏆 ゲームクリア！</h2>
+      <p id="endText"></p>
+      <p id="bestText"></p>
+      <button id="againBtn" class="bigbtn" type="button">もう一度遊ぶ</button>
+    </div>
+
+    <div id="pauseOv" class="overlay hidden">
+      <h2>⏸ ポーズ中</h2>
+      <p>休憩したら、再開ボタンを押してね。</p>
+      <button id="resumeBtn" class="bigbtn blue" type="button">▶ 再開する</button>
+    </div>
+
+    <div id="setOv" class="overlay hidden">
+      <h2>⚙ 設定</h2>
+      <div class="setrow"><span>🔊 サウンド</span><input type="checkbox" id="setSound"></div>
+      <div class="setrow"><span>📳 画面の揺れ</span><input type="checkbox" id="setShake"></div>
+      <div class="setrow"><span>🎮 タッチボタン</span>
+        <span class="seg">
+          <button type="button" data-touch="auto">自動</button>
+          <button type="button" data-touch="on">表示</button>
+          <button type="button" data-touch="off">非表示</button>
+        </span>
+      </div>
+      <p style="margin-top:10px; font-size:13px; color:#aaa;">設定はこのブラウザに保存されるよ。</p>
+      <button id="setCloseBtn" class="bigbtn blue" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <div id="touch">
+    <div class="group">
+      <div class="tbtn" id="tLeft">◀</div>
+      <div class="tbtn" id="tRight">▶</div>
+    </div>
+    <div class="tbtn wide" id="tShift">SHIFT</div>
+    <div class="group">
+      <div class="tbtn" id="tJump">▲</div>
+    </div>
+  </div>
+  <div id="foot">SHIFT —ふたつの世界— ｜ Game Off 2026 テーマ「SHIFT」 ｜ 1ファイルで動くブラウザゲーム</div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================
+   SHIFT —ふたつの世界—
+   白の世界 / 黒の世界を切り替えながら旗を目指すアクション。
+   ギミック：世界限定の足場、トゲ、重力ブロック（Shift長押しで
+   重力反転）、世界切り替えで動くリフト。
+   外部ライブラリなし・1ファイル完結。
+   ========================================================= */
+const TILE = 40, COLS = 24, ROWS = 13, W = 960, H = 520;
+const GRAV = 0.65, MOVE = 3.4, JUMP_V = -12, MAX_FALL = 14;
+
+const LEVELS = [
+  {
+    name: "LEVEL 1 — はじめてのシフト",
+    rows: [
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........a...............",
+      "........a.....o.........",
+      ".S......a............G..",
+      "#########.##bb##########",
+      "############..##########",
+    ],
+  },
+  {
+    name: "LEVEL 2 — トゲとコイン",
+    rows: [
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "...........o............",
+      ".........bbb............",
+      ".S......xxx....yyy...G..",
+      "##########..##########..",
+      "##########..##########..",
+    ],
+  },
+  {
+    name: "LEVEL 3 — 逆さまの世界",
+    rows: [
+      "......##############....",
+      "......##############....",
+      ".............o..........",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "....o...................",
+      ".S.....gg.^^^^^^^...G...",
+      "########################",
+      "########################",
+    ],
+  },
+  {
+    name: "LEVEL 4 — 動くリフト",
+    lifts: [{ x: 400, yLow: 400, yHigh: 200, w: 80 }],
+    rows: [
+      "........................",
+      "........................",
+      "........................",
+      "..................o.....",
+      ".....................G..",
+      ".............###########",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      ".S......................",
+      "########################",
+      "########################",
+    ],
+  },
+  {
+    name: "LEVEL 5 — 最後の試練",
+    lifts: [{ x: 720, yLow: 360, yHigh: 200, w: 80 }],
+    rows: [
+      "............########....",
+      "............########....",
+      "................o.......",
+      "........................",
+      "......................G.",
+      "....................####",
+      "........................",
+      ".........o..............",
+      "........bbb.............",
+      "........................",
+      ".S...aaa.....g.^^^......",
+      "#####......#############",
+      "#####......#############",
+    ],
+  },
+];
+
+// ---------- settings ----------
+const DEF_SETTINGS = { sound: true, touch: "auto", shake: true };
+let settings = { ...DEF_SETTINGS };
+try {
+  const saved = JSON.parse(localStorage.getItem("shift_settings_v1") || "{}");
+  settings = { ...DEF_SETTINGS, ...saved };
+} catch (e) { /* 設定が読めなくても初期値で遊べる */ }
+function saveSettings() {
+  try { localStorage.setItem("shift_settings_v1", JSON.stringify(settings)); } catch (e) { /* 保存できなくても遊べる */ }
+}
+
+// ---------- state ----------
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+
+let status = "title"; // title | playing | clear | end | pause
+let levelIndex = 0, world = 0; // 0 = 白, 1 = 黒
+let coinsGot = 0, coinsTotal = 0, deaths = 0, timeMs = 0;
+let shiftCooldown = 0, flash = 0, shake = 0;
+let muted = !settings.sound;
+let levelTimeMs = 0;
+let particles = [];
+let level = null; // parsed level
+let player = null;
+let gravFlip = false, gravDir = 1; // 1 = 下向き, -1 = 上向き（逆転中）
+let standingOnLift = false;
+
+function parseLevel(def) {
+  const solids = [], spikes = [], coins = [], gravTiles = [];
+  let spawn = { x: 60, y: 400 }, goal = { x: 880, y: 400 };
+  def.rows.forEach((row, r) => {
+    for (let c = 0; c < COLS; c++) {
+      const ch = row[c] || ".";
+      const x = c * TILE, y = r * TILE;
+      if (ch === "#" || ch === "a" || ch === "b" || ch === "g") solids.push({ x, y, kind: ch });
+      if (ch === "g") gravTiles.push({ x, y });
+      else if (ch === "^" || ch === "x" || ch === "y") spikes.push({ x, y, kind: ch });
+      else if (ch === "o") coins.push({ x: x + TILE / 2, y: y + TILE / 2, got: false });
+      else if (ch === "S") spawn = { x: x + 6, y: y + 4 };
+      else if (ch === "G") goal = { x, y };
+    }
+  });
+  const lifts = (def.lifts || []).map(l => ({ x: l.x, yLow: l.yLow, yHigh: l.yHigh, w: l.w, h: 20, t: 0, y: l.yLow, prevY: l.yLow }));
+  return { name: def.name, solids, spikes, coins, gravTiles, lifts, spawn, goal };
+}
+
+function loadLevel(i) {
+  levelIndex = i;
+  level = parseLevel(LEVELS[i]);
+  coinsTotal = LEVELS.reduce((n, d) => n + (d.rows.join("").match(/o/g) || []).length, 0);
+  respawn();
+  levelTimeMs = 0;
+  world = 0;
+  gravFlip = false; gravDir = 1; standingOnLift = false;
+  $("hudLevel").textContent = level.name;
+  updateHUD();
+}
+
+function respawn() {
+  player = {
+    x: level.spawn.x, y: level.spawn.y, w: 26, h: 34,
+    vx: 0, vy: 0, onGround: false, coyote: 0, jbuf: 0, face: 1,
+  };
+  gravFlip = false; gravDir = 1; standingOnLift = false;
+  level.coins.forEach(c => { c.got = false; });
+  recountCoins();
+}
+
+function recountCoins() {
+  coinsGot = LEVELS.slice(0, levelIndex).reduce((n, d) => n + (d.rows.join("").match(/o/g) || []).length, 0)
+    + level.coins.filter(c => c.got).length;
+  updateHUD();
+}
+
+// ---------- input ----------
+const keys = {};
+const KEYMAP = {
+  ArrowLeft: "left", KeyA: "left",
+  ArrowRight: "right", KeyD: "right",
+  ArrowUp: "jump", Space: "jump", KeyW: "jump",
+  ShiftLeft: "shift", ShiftRight: "shift", KeyX: "shift", KeyK: "shift",
+};
+window.addEventListener("keydown", e => {
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) e.preventDefault();
+  if (e.repeat) return;
+  const a = KEYMAP[e.code];
+  if (a) keys[a] = true;
+  if (a === "jump" && player) player.jbuf = 6;
+  if (a === "shift") tryShift();
+  if (e.code === "KeyR" && status === "playing") { die(true); }
+  if (e.code === "KeyM") toggleMute();
+  if (e.code === "KeyP" || e.code === "Escape") togglePause();
+});
+window.addEventListener("keyup", e => {
+  const a = KEYMAP[e.code];
+  if (a) keys[a] = false;
+});
+function bindTouch(id, action, onDown) {
+  const el = $(id);
+  const down = e => { e.preventDefault(); keys[action] = true; if (onDown) onDown(); };
+  const up = e => { e.preventDefault(); keys[action] = false; };
+  el.addEventListener("pointerdown", down);
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  el.addEventListener("pointerleave", up);
+  el.addEventListener("contextmenu", e => e.preventDefault());
+}
+bindTouch("tLeft", "left");
+bindTouch("tRight", "right");
+bindTouch("tJump", "jump", () => { if (player) player.jbuf = 6; });
+bindTouch("tShift", "shift", () => tryShift());
+
+// ---------- audio (tiny synth, no assets) ----------
+let actx = null;
+function beep(freq, dur, type, vol, slideTo) {
+  if (muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, actx.currentTime);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, actx.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.08, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g).connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + dur);
+  } catch (e) { /* 音が出なくてもゲームは止めない */ }
+}
+const sJump = () => beep(280, 0.12, "square", 0.06, 520);
+const sShift = () => { beep(420, 0.09, "sine", 0.09, 840); setTimeout(() => beep(840, 0.1, "sine", 0.07, 420), 70); };
+const sCoin = () => beep(880, 0.12, "sine", 0.09, 1320);
+const sDie = () => beep(320, 0.25, "sawtooth", 0.08, 90);
+const sClear = () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.16, "triangle", 0.09), i * 110));
+const sBlocked = () => beep(140, 0.08, "square", 0.06);
+const sFlip = () => beep(200, 0.18, "sine", 0.08, 900);
+
+function toggleMute() {
+  settings.sound = !settings.sound;
+  muted = !settings.sound;
+  saveSettings();
+  $("muteBtn").textContent = muted ? "🔇 音なし" : "🔊 音あり";
+  $("setSound").checked = settings.sound;
+}
+
+// ---------- collision ----------
+function solidAt(col, row, w) {
+  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return false;
+  for (const s of level.solids) {
+    if (s.x === col * TILE && s.y === row * TILE) {
+      if (s.kind === "#" || s.kind === "g") return true;
+      if (s.kind === "a") return w === 0;
+      if (s.kind === "b") return w === 1;
+    }
+  }
+  return false;
+}
+function rectHitsSolid(x, y, w, h, worldToCheck) {
+  const c0 = Math.floor(x / TILE), c1 = Math.floor((x + w - 0.01) / TILE);
+  const r0 = Math.floor(y / TILE), r1 = Math.floor((y + h - 0.01) / TILE);
+  for (let r = r0; r <= r1; r++)
+    for (let c = c0; c <= c1; c++)
+      if (solidAt(c, r, worldToCheck)) return true;
+  return false;
+}
+function touchingGravity() {
+  if (!player) return false;
+  for (const g of level.gravTiles) {
+    if (player.x - 2 < g.x + TILE && player.x + player.w + 2 > g.x &&
+        player.y - 2 < g.y + TILE && player.y + player.h + 2 > g.y) return true;
+  }
+  return false;
+}
+function liftOverlap() {
+  if (!player) return null;
+  for (const l of level.lifts) {
+    if (player.x < l.x + l.w && player.x + player.w > l.x &&
+        player.y < l.y + l.h && player.y + player.h > l.y) return l;
+  }
+  return null;
+}
+
+function tryShift() {
+  if (status !== "playing" || !player || shiftCooldown > 0) return;
+  const other = world ^ 1;
+  // 切り替え先で体が壁にめり込むなら、切り替えを止める
+  if (rectHitsSolid(player.x + 1, player.y + 1, player.w - 2, player.h - 2, other)) {
+    sBlocked(); shake = 6;
+    return;
+  }
+  world = other;
+  shiftCooldown = 0.35;
+  flash = 1;
+  sShift();
+  for (let i = 0; i < 22; i++) {
+    particles.push({
+      x: player.x + player.w / 2, y: player.y + player.h / 2,
+      vx: (Math.random() - 0.5) * 7, vy: (Math.random() - 0.5) * 7,
+      life: 0.5, max: 0.5, col: world === 0 ? "#ffb703" : "#4cc9f0",
+    });
+  }
+  updateHUD();
+}
+
+function die(silent) {
+  if (status !== "playing") return;
+  deaths++;
+  if (!silent) sDie();
+  shake = 10;
+  for (let i = 0; i < 18; i++) {
+    particles.push({
+      x: player.x + player.w / 2, y: player.y + player.h / 2,
+      vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6 - 2,
+      life: 0.6, max: 0.6, col: "#e63946",
+    });
+  }
+  respawn();
+  updateHUD();
+}
+
+// ---------- update ----------
+function step(dt) {
+  if (!player) return;
+  if (shiftCooldown > 0) shiftCooldown -= dt / 60;
+  if (flash > 0) flash -= dt / 30;
+  if (shake > 0) shake -= dt / 10;
+
+  // 重力反転：紫のブロックに触れている間に Shift を押している間だけ逆転する
+  if (keys.shift && touchingGravity()) {
+    if (!gravFlip) sFlip();
+    gravFlip = true;
+  }
+  if (!keys.shift) gravFlip = false;
+  gravDir = gravFlip ? -1 : 1;
+
+  // リフト：世界の切り替えで上下する。乗っていたら運ぶ
+  for (const l of level.lifts) {
+    const target = world; // 白=下(0)、黒=上(1)
+    l.prevY = l.y;
+    if (l.t < target) l.t = Math.min(target, l.t + dt / 60 * 1.4);
+    if (l.t > target) l.t = Math.max(target, l.t - dt / 60 * 1.4);
+    l.y = l.yLow + (l.yHigh - l.yLow) * l.t;
+    if (standingOnLift) player.y += l.y - l.prevY;
+  }
+
+  // 移動
+  const left = keys.left, right = keys.right;
+  const target = (right ? 1 : 0) - (left ? 1 : 0);
+  const acc = player.onGround ? 0.6 : 0.4;
+  if (target !== 0) {
+    player.vx += target * acc * dt;
+    player.vx = Math.max(-MOVE, Math.min(MOVE, player.vx));
+    player.face = target;
+  } else {
+    const fr = player.onGround ? 0.7 : 0.15;
+    player.vx = Math.abs(player.vx) <= fr * dt ? 0 : player.vx - Math.sign(player.vx) * fr * dt;
+  }
+
+  // ジャンプ（コヨーテタイム + 入力バッファ）。逆転中は下向きに跳ぶ
+  if (player.coyote > 0) player.coyote -= dt;
+  if (player.jbuf > 0) player.jbuf -= dt;
+  if (player.jbuf > 0 && (player.onGround || player.coyote > 0)) {
+    player.vy = JUMP_V * gravDir;
+    player.onGround = false; player.coyote = 0; player.jbuf = 0;
+    sJump();
+  }
+
+  player.vy = Math.max(-MAX_FALL, Math.min(MAX_FALL, player.vy + GRAV * gravDir * dt));
+
+  // X移動と衝突
+  player.x += player.vx * dt;
+  if (player.vx > 0) {
+    const r0 = Math.floor(player.y / TILE), r1 = Math.floor((player.y + player.h - 0.01) / TILE);
+    const c = Math.floor((player.x + player.w) / TILE);
+    for (let r = r0; r <= r1; r++) if (solidAt(c, r, world)) { player.x = c * TILE - player.w - 0.01; player.vx = 0; break; }
+  } else if (player.vx < 0) {
+    const r0 = Math.floor(player.y / TILE), r1 = Math.floor((player.y + player.h - 0.01) / TILE);
+    const c = Math.floor(player.x / TILE);
+    for (let r = r0; r <= r1; r++) if (solidAt(c, r, world)) { player.x = (c + 1) * TILE + 0.01; player.vx = 0; break; }
+  }
+  if (player.x < 0) { player.x = 0; player.vx = 0; }
+  if (player.x + player.w > W) { player.x = W - player.w; player.vx = 0; }
+
+  // Y移動と衝突（重力方向が下なら下側が地面、上なら上側が地面）
+  const wasGround = player.onGround;
+  player.onGround = false;
+  standingOnLift = false;
+  player.y += player.vy * dt;
+  if (player.vy * gravDir > 0) { // 重力方向へ移動中 → 着地側
+    if (gravDir === 1) {
+      const c0 = Math.floor(player.x / TILE), c1 = Math.floor((player.x + player.w - 0.01) / TILE);
+      const r = Math.floor((player.y + player.h) / TILE);
+      for (let c = c0; c <= c1; c++) if (solidAt(c, r, world)) { player.y = r * TILE - player.h; player.vy = 0; player.onGround = true; break; }
+    } else {
+      const c0 = Math.floor(player.x / TILE), c1 = Math.floor((player.x + player.w - 0.01) / TILE);
+      const r = Math.floor(player.y / TILE);
+      for (let c = c0; c <= c1; c++) if (solidAt(c, r, world)) { player.y = (r + 1) * TILE + 0.01; player.vy = 0; player.onGround = true; break; }
+    }
+  } else { // 反重力方向 → 頭ぶつけ側
+    if (gravDir === 1) {
+      const c0 = Math.floor(player.x / TILE), c1 = Math.floor((player.x + player.w - 0.01) / TILE);
+      const r = Math.floor(player.y / TILE);
+      for (let c = c0; c <= c1; c++) if (solidAt(c, r, world)) { player.y = (r + 1) * TILE + 0.01; player.vy = 0; break; }
+    } else {
+      const c0 = Math.floor(player.x / TILE), c1 = Math.floor((player.x + player.w - 0.01) / TILE);
+      const r = Math.floor((player.y + player.h) / TILE);
+      for (let c = c0; c <= c1; c++) if (solidAt(c, r, world)) { player.y = r * TILE - player.h - 0.01; player.vy = 0; break; }
+    }
+  }
+  if (player.onGround) player.coyote = 6;
+  else if (wasGround) player.coyote = 6;
+
+  // リフトとの衝突（重なりを一番小さい方向へ押し出す）
+  const lift = liftOverlap();
+  if (lift) {
+    const overlapTop = player.y + player.h - lift.y;
+    const overlapBottom = lift.y + lift.h - player.y;
+    const overlapLeft = player.x + player.w - lift.x;
+    const overlapRight = lift.x + lift.w - player.x;
+    const min = Math.min(overlapTop, overlapBottom, overlapLeft, overlapRight);
+    if (min === overlapTop) {
+      player.y = lift.y - player.h; player.vy = 0; player.onGround = true; standingOnLift = true; player.coyote = 6;
+    } else if (min === overlapBottom) {
+      player.y = lift.y + lift.h + 0.01; if (player.vy < 0) player.vy = 0;
+    } else if (min === overlapLeft) {
+      player.x = lift.x - player.w - 0.01; if (player.vx > 0) player.vx = 0;
+    } else {
+      player.x = lift.x + lift.w + 0.01; if (player.vx < 0) player.vx = 0;
+    }
+  }
+
+  // コイン
+  for (const c of level.coins) {
+    if (!c.got && Math.abs(player.x + player.w / 2 - c.x) < 30 && Math.abs(player.y + player.h / 2 - c.y) < 34) {
+      c.got = true; coinsGot++; sCoin(); updateHUD();
+    }
+  }
+  // トゲ
+  for (const s of level.spikes) {
+    if (s.kind === "^" || (s.kind === "x" && world === 0) || (s.kind === "y" && world === 1)) {
+      if (player.x + 4 < s.x + TILE && player.x + player.w - 4 > s.x &&
+          player.y + 8 < s.y + TILE && player.y + player.h > s.y + 14) { die(); return; }
+    }
+  }
+  // ゴール（旗のまわりは少し広めに判定。天井から降りてきた勢いで通り過ぎても届くように）
+  if (player.x + player.w > level.goal.x - 40 && player.x < level.goal.x + TILE * 2 &&
+      player.y + player.h > level.goal.y - 20 && player.y < level.goal.y + TILE * 2) {
+    levelClear();
+    return;
+  }
+  // 落下（下にも上にも落ちたらミス）
+  if (player.y > H + 60 || player.y < -120) { die(); return; }
+
+  // パーティクル
+  particles = particles.filter(p => (p.life -= dt / 60) > 0);
+  for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 0.12 * dt; }
+}
+
+function levelClear() {
+  sClear();
+  const t = levelTimeMs;
+  if (levelIndex + 1 >= LEVELS.length) {
+    status = "end";
+    $("endText").textContent = `全${LEVELS.length}レベル クリア！　タイム ${fmtTime(timeMs)}　／　コイン ${coinsGot} / ${coinsTotal}　／　ミス ${deaths}回`;
+    try {
+      const best = Number(localStorage.getItem("shift_best_ms") || Infinity);
+      if (timeMs < best) {
+        localStorage.setItem("shift_best_ms", String(timeMs));
+        $("bestText").textContent = "🎉 新記録！ベストタイムを更新したよ。";
+      } else {
+        $("bestText").textContent = `ベストタイム：${fmtTime(best)}`;
+      }
+    } catch (e) { $("bestText").textContent = ""; }
+    $("endOv").classList.remove("hidden");
+  } else {
+    status = "clear";
+    $("clearTitle").textContent = `🎉 ${level.name} クリア！`;
+    $("clearText").textContent = `タイム ${fmtTime(t)}　／　コイン ${coinsGot} / ${coinsTotal}`;
+    $("clearOv").classList.remove("hidden");
+  }
+  updateHUD();
+}
+
+function fmtTime(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+// ---------- render ----------
+function draw() {
+  const dark = world === 1;
+  ctx.save();
+  if (settings.shake && shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+  // 背景
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  if (!dark) { g.addColorStop(0, "#fdf6d8"); g.addColorStop(1, "#f5e6b8"); }
+  else { g.addColorStop(0, "#14142b"); g.addColorStop(1, "#232347"); }
+  ctx.fillStyle = g; ctx.fillRect(-12, -12, W + 24, H + 24);
+  if (dark) {
+    ctx.fillStyle = "rgba(255,255,255,.8)";
+    for (let i = 0; i < 40; i++) {
+      const sx = (i * 173) % W, sy = (i * 97) % 300;
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+    ctx.fillStyle = "#ffe9a8";
+    ctx.beginPath(); ctx.arc(830, 70, 26, 0, 7); ctx.fill();
+    ctx.fillStyle = "#14142b";
+    ctx.beginPath(); ctx.arc(842, 62, 22, 0, 7); ctx.fill();
+  } else {
+    ctx.fillStyle = "#ffd75e";
+    ctx.beginPath(); ctx.arc(830, 70, 26, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.9)";
+    ctx.beginPath(); ctx.ellipse(180, 80, 60, 18, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(420, 55, 70, 20, 0, 0, 7); ctx.fill();
+  }
+
+  // 足場（もう片方の世界のは半透明で見せる）
+  for (const s of level.solids) {
+    const mine = s.kind === "#" || s.kind === "g" || (s.kind === "a" && world === 0) || (s.kind === "b" && world === 1);
+    if (s.kind === "#") ctx.fillStyle = dark ? "#5a5a8a" : "#7a6a53";
+    else if (s.kind === "a") ctx.fillStyle = "#ffb703";
+    else if (s.kind === "b") ctx.fillStyle = "#4cc9f0";
+    else ctx.fillStyle = "#9b5de5";
+    if (!mine) { ctx.globalAlpha = 0.22; ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 2; ctx.strokeRect(s.x + 2, s.y + 2, TILE - 4, TILE - 4); ctx.globalAlpha = 1; continue; }
+    ctx.fillRect(s.x, s.y, TILE, TILE);
+    ctx.fillStyle = "rgba(255,255,255,.18)";
+    ctx.fillRect(s.x, s.y, TILE, 6);
+    if (s.kind === "a" || s.kind === "b") { ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(s.x, s.y + TILE - 6, TILE, 6); }
+    if (s.kind === "g") {
+      // 重力ブロック：上下の矢印
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.moveTo(s.x + 20, s.y + 8); ctx.lineTo(s.x + 28, s.y + 18); ctx.lineTo(s.x + 12, s.y + 18);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(s.x + 20, s.y + 32); ctx.lineTo(s.x + 28, s.y + 22); ctx.lineTo(s.x + 12, s.y + 22);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // リフト（移動レールを点線で、リフト本体をオレンジで）
+  for (const l of level.lifts) {
+    ctx.strokeStyle = dark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.3)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(l.x + l.w / 2, l.yLow + l.h / 2);
+    ctx.lineTo(l.x + l.w / 2, l.yHigh + l.h / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#ff9f43";
+    roundRect(l.x, l.y, l.w, l.h, 6); ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,.25)";
+    ctx.fillRect(l.x + 4, l.y + l.h - 5, l.w - 8, 3);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 11px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("▲▼", l.x + l.w / 2, l.y + l.h / 2 + 1);
+  }
+
+  // トゲ
+  for (const s of level.spikes) {
+    const active = s.kind === "^" || (s.kind === "x" && world === 0) || (s.kind === "y" && world === 1);
+    ctx.globalAlpha = active ? 1 : 0.2;
+    ctx.fillStyle = active ? "#e63946" : "#999";
+    for (let i = 0; i < 2; i++) {
+      const bx = s.x + i * 20;
+      ctx.beginPath();
+      ctx.moveTo(bx + 2, s.y + TILE); ctx.lineTo(bx + 10, s.y + 12); ctx.lineTo(bx + 18, s.y + TILE);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // コイン
+  const now = performance.now() / 300;
+  for (const c of level.coins) {
+    if (c.got) continue;
+    ctx.save();
+    ctx.translate(c.x, c.y + Math.sin(now + c.x) * 3);
+    ctx.fillStyle = "#ffd75e";
+    ctx.beginPath(); ctx.arc(0, 0, 11, 0, 7); ctx.fill();
+    ctx.fillStyle = "#b8860b";
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, 7); ctx.fill();
+    ctx.fillStyle = "#ffd75e";
+    ctx.font = "bold 11px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("S", 0, 1);
+    ctx.restore();
+  }
+
+  // ゴール（旗）
+  ctx.strokeStyle = dark ? "#eee" : "#333";
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(level.goal.x + 8, level.goal.y + TILE * 2); ctx.lineTo(level.goal.x + 8, level.goal.y - 20); ctx.stroke();
+  ctx.fillStyle = "#2ec4b6";
+  ctx.beginPath();
+  ctx.moveTo(level.goal.x + 8, level.goal.y - 20);
+  ctx.lineTo(level.goal.x + 34, level.goal.y - 10);
+  ctx.lineTo(level.goal.x + 8, level.goal.y);
+  ctx.closePath(); ctx.fill();
+
+  // プレイヤー（重力反転中は上下さかさま）
+  if (player) {
+    const px = player.x, py = player.y;
+    ctx.save();
+    ctx.translate(px + player.w / 2, py + player.h / 2);
+    if (gravDir === -1) ctx.scale(1, -1);
+    ctx.translate(-player.w / 2, -player.h / 2);
+    ctx.fillStyle = dark ? "#4cc9f0" : "#ff6b35";
+    roundRect(0, 0, player.w, player.h, 7); ctx.fill();
+    ctx.fillStyle = "#fff";
+    const ex = player.face > 0 ? 16 : 6;
+    ctx.beginPath(); ctx.arc(ex, 12, 4, 0, 7); ctx.fill();
+    ctx.fillStyle = "#222";
+    ctx.beginPath(); ctx.arc(ex + (player.face > 0 ? 1.5 : -1.5), 12, 2, 0, 7); ctx.fill();
+    if (!player.onGround) { ctx.fillStyle = "#fff"; ctx.fillRect(4, 24, 18, 3); }
+    ctx.restore();
+    if (gravDir === -1) {
+      ctx.fillStyle = "#9b5de5";
+      ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText("⇅ 逆転中", px + player.w / 2, py - 6);
+    }
+  }
+
+  // パーティクル
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.col;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // シフトのフラッシュ
+  if (flash > 0) {
+    ctx.globalAlpha = flash * 0.35;
+    ctx.fillStyle = world === 0 ? "#fff7cc" : "#9fd8ff";
+    ctx.fillRect(-12, -12, W + 24, H + 24);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+
+  // 世界ラベル（画面内）
+  ctx.font = "bold 15px sans-serif";
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.fillStyle = dark ? "rgba(255,255,255,.65)" : "rgba(0,0,0,.5)";
+  ctx.fillText(dark ? "● 黒の世界" : "○ 白の世界", 12, 10);
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function updateHUD() {
+  const wEl = $("hudWorld");
+  wEl.textContent = world === 0 ? "☀ 白の世界" : "🌙 黒の世界";
+  wEl.classList.toggle("dark", world === 1);
+  $("hudCoins").textContent = `🪙 ${coinsGot} / ${coinsTotal}`;
+  $("hudDeaths").textContent = `💀 ${deaths}`;
+  $("hudTime").textContent = `⏱ ${fmtTime(timeMs)}`;
+}
+
+// ---------- flow ----------
+function startGame() {
+  coinsGot = 0; deaths = 0; timeMs = 0;
+  $("titleOv").classList.add("hidden");
+  $("clearOv").classList.add("hidden");
+  $("endOv").classList.add("hidden");
+  loadLevel(0);
+  status = "playing";
+  beep(523, 0.12, "triangle", 0.09);
+}
+function togglePause() {
+  if (status === "playing") { status = "pause"; $("pauseOv").classList.remove("hidden"); }
+  else if (status === "pause") { status = "playing"; $("pauseOv").classList.add("hidden"); }
+}
+$("startBtn").addEventListener("click", startGame);
+$("againBtn").addEventListener("click", startGame);
+$("nextBtn").addEventListener("click", () => {
+  $("clearOv").classList.add("hidden");
+  loadLevel(levelIndex + 1);
+  status = "playing";
+});
+$("resumeBtn").addEventListener("click", togglePause);
+$("pauseBtn").addEventListener("click", togglePause);
+$("muteBtn").addEventListener("click", toggleMute);
+
+// ---------- settings ----------
+function applySettings() {
+  document.body.classList.toggle("touch-on", settings.touch === "on");
+  document.body.classList.toggle("touch-off", settings.touch === "off");
+  $("muteBtn").textContent = muted ? "🔇 音なし" : "🔊 音あり";
+  $("setSound").checked = settings.sound;
+  $("setShake").checked = settings.shake;
+  document.querySelectorAll("[data-touch]").forEach(b => b.classList.toggle("on", b.dataset.touch === settings.touch));
+}
+$("setBtn").addEventListener("click", () => { $("setOv").classList.remove("hidden"); });
+$("setCloseBtn").addEventListener("click", () => { $("setOv").classList.add("hidden"); });
+$("setSound").addEventListener("change", e => { settings.sound = e.target.checked; muted = !settings.sound; saveSettings(); applySettings(); });
+$("setShake").addEventListener("change", e => { settings.shake = e.target.checked; saveSettings(); applySettings(); });
+document.querySelectorAll("[data-touch]").forEach(b => b.addEventListener("click", () => {
+  settings.touch = b.dataset.touch;
+  saveSettings(); applySettings();
+}));
+applySettings();
+
+// ---------- main loop ----------
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 16.667, 2.5);
+  last = now;
+  if (status === "playing") {
+    timeMs += (now - (loop._p || now));
+    levelTimeMs += (now - (loop._p || now));
+    step(dt);
+    $("hudTime").textContent = `⏱ ${fmtTime(timeMs)}`;
+  }
+  loop._p = now;
+  if (level) draw();
+  requestAnimationFrame(loop);
+}
+loadLevel(0);
+status = "title";
+requestAnimationFrame(loop);
+
+// デバッグ用（読み取り専用）：テストが状態を見るための窓口
+window.__game = {
+  get status() { return status; },
+  get level() { return levelIndex + 1; },
+  get world() { return world; },
+  get x() { return player ? player.x : 0; },
+  get y() { return player ? player.y : 0; },
+  get coins() { return coinsGot; },
+  get deaths() { return deaths; },
+  get onGround() { return player ? player.onGround : false; },
+  get grav() { return gravDir; },
+  get grid() { return LEVELS[levelIndex].rows.slice(); },
+  get goalX() { return level ? level.goal.x : 0; },
+  get lifts() { return level ? level.lifts.map(l => ({ x: l.x, y: l.y, t: l.t })) : []; },
+};
+</script>
+</body>
+</html>
