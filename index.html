@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SHIFT —ふたつの世界— | Game Off 2026</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   html, body { height: 100%; }
   body {
     background: #1a1a2e; color: #eee; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
@@ -20,15 +20,22 @@
   }
   #hud .world { padding: 2px 10px; border-radius: 999px; background: #f5f0dc; color: #333; transition: background .2s, color .2s; }
   #hud .world.dark { background: #22223a; color: #ffd75e; border: 1px solid #ffd75e; }
-  #hud button { background: #3a3a5e; color: #eee; border: 1px solid #555; border-radius: 6px; padding: 3px 10px; font-size: 14px; cursor: pointer; }
+  #hud button { background: #3a3a5e; color: #eee; border: 1px solid #555; border-radius: 6px; padding: 3px 10px; font-size: 14px; cursor: pointer; touch-action: manipulation; }
   #hud button:hover { background: #4a4a72; }
   #stage { position: relative; width: 100%; }
   canvas { display: block; width: 100%; height: auto; background: #f5f0dc; border-radius: 0 0 10px 10px; touch-action: none; }
   .overlay {
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; background: rgba(20, 20, 40, 0.82); border-radius: 0 0 10px 10px; z-index: 5; padding: 16px;
+    text-align: center; background: rgba(20, 20, 40, 0.82); border-radius: 0 0 10px 10px; z-index: 5; padding: 16px; touch-action: none;
   }
   .overlay.hidden { display: none; }
+  #signBar { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); max-width: 92%; padding: 8px 14px; border-radius: 10px; background: rgba(0,0,0,.72); color: #fff; font-size: 14px; text-align: center; z-index: 4; pointer-events: none; }
+  #signBar.hidden { display: none; }
+  #editBar { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); max-width: 96%; padding: 6px 12px; border-radius: 8px; background: rgba(20, 20, 60, .85); color: #ffd75e; font-size: 12px; text-align: center; z-index: 4; pointer-events: none; }
+  #editBar.hidden { display: none; }
+  #warpList { display: flex; flex-direction: column; gap: 8px; margin: 4px 0; }
+  #warpList button { padding: 8px 16px; border-radius: 8px; border: 1px solid #2ec4b6; background: #123; color: #fff; font-size: 15px; cursor: pointer; }
+  #warpList button:hover { background: #1a4d4a; }
   .overlay h1 { font-size: min(44px, 8vw); letter-spacing: 4px; margin-bottom: 4px; }
   .overlay h1 .s1 { color: #ffd75e; } .overlay h1 .s2 { color: #6ec6ff; }
   .overlay h2 { font-size: min(30px, 6vw); margin-bottom: 8px; }
@@ -37,7 +44,7 @@
   .overlay .keys b { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; margin: 0 2px; font-size: 13px; }
   .bigbtn {
     margin-top: 10px; font-size: 20px; font-weight: bold; padding: 12px 34px; border: none; border-radius: 999px;
-    background: linear-gradient(135deg, #ffd75e, #ff9f43); color: #222; cursor: pointer;
+    background: linear-gradient(135deg, #ffd75e, #ff9f43); color: #222; cursor: pointer; touch-action: manipulation;
     box-shadow: 0 4px 0 #b96a00; transition: transform .05s;
   }
   .bigbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 #b96a00; }
@@ -68,7 +75,7 @@
   <div id="hud">
     <span id="hudLevel">LEVEL 1</span>
     <span id="hudWorld" class="world">☀ 白の世界</span>
-    <span id="hudCoins">🪙 0 / 7</span>
+    <span id="hudCoins">🪙 0 / 9</span>
     <span id="hudDeaths">💀 0</span>
     <span id="hudTime">⏱ 0:00</span>
     <span>
@@ -79,50 +86,56 @@
   </div>
   <div id="stage">
     <canvas id="cv" width="960" height="520"></canvas>
+    <div id="signBar" class="hidden"></div>
+    <div id="editBar" class="hidden"></div>
 
     <div id="titleOv" class="overlay">
       <h1><span class="s1">SHIFT</span> <span class="s2">—ふたつの世界—</span></h1>
-      <p>白の世界と黒の世界。同じ場所に、違う足場がある。<br>世界を切り替えて、旗を目指そう。</p>
+      <p id="titleDesc">白の世界と黒の世界。同じ場所に、違う足場がある。<br>世界を切り替えて、旗を目指そう。</p>
       <div class="keys">
         <b>←</b><b>→</b> / <b>A</b><b>D</b> 移動　　<b>↑</b> / <b>Space</b> ジャンプ<br>
         <b>Shift</b> / <b>X</b> 世界を切り替える　　<b>P</b> ポーズ　<b>R</b> やり直し<br>
         <b>Shift長押し</b>（🟪紫のブロックの上）重力が逆転する
       </div>
-      <p>🟨 黄色の足場は白の世界だけ、🟦 青の足場は黒の世界だけにあるよ。<br>🟧 オレンジのリフトは、世界を切り替えると上下に動くよ。🔺 トゲに触れたらミス。<br>半透明の足場は、もう片方の世界のものだよ。</p>
+      <p id="titleTips">🟨 黄色の足場は白の世界だけ、🟦 青の足場は黒の世界だけにあるよ。<br>🟧 オレンジのリフトは、世界を切り替えると上下に動くよ。🔺 トゲに触れたらミス。<br>半透明の足場は、もう片方の世界のものだよ。</p>
       <button id="startBtn" class="bigbtn" type="button">▶ はじめる</button>
-    </div>
-
-    <div id="clearOv" class="overlay hidden">
-      <h2 id="clearTitle">🎉 クリア！</h2>
-      <p id="clearText"></p>
-      <button id="nextBtn" class="bigbtn blue" type="button">次のレベルへ ▶</button>
+      <button id="continueBtn" class="bigbtn blue hidden" type="button">▶ つづきから</button>
+      <button id="langBtn" class="bigbtn" type="button" style="background:#444;">🌐 English</button>
     </div>
 
     <div id="endOv" class="overlay hidden">
-      <h2>🏆 ゲームクリア！</h2>
+      <h2 id="endTitle">🏆 ゲームクリア！</h2>
       <p id="endText"></p>
       <p id="bestText"></p>
+      <p id="endChallenge"></p>
       <button id="againBtn" class="bigbtn" type="button">もう一度遊ぶ</button>
     </div>
 
     <div id="pauseOv" class="overlay hidden">
-      <h2>⏸ ポーズ中</h2>
-      <p>休憩したら、再開ボタンを押してね。</p>
+      <h2 id="pauseTitle">⏸ ポーズ中</h2>
+      <p id="pauseDesc">休憩したら、再開ボタンを押してね。</p>
+      <div id="warpList"></div>
       <button id="resumeBtn" class="bigbtn blue" type="button">▶ 再開する</button>
     </div>
 
     <div id="setOv" class="overlay hidden">
-      <h2>⚙ 設定</h2>
-      <div class="setrow"><span>🔊 サウンド</span><input type="checkbox" id="setSound"></div>
-      <div class="setrow"><span>📳 画面の揺れ</span><input type="checkbox" id="setShake"></div>
-      <div class="setrow"><span>🎮 タッチボタン</span>
+      <h2 id="setTitle">⚙ 設定</h2>
+      <div class="setrow"><span id="setSoundLabel">🔊 サウンド</span><input type="checkbox" id="setSound"></div>
+      <div class="setrow"><span id="setShakeLabel">📳 画面の揺れ</span><input type="checkbox" id="setShake"></div>
+      <div class="setrow"><span id="setTouchLabel">🎮 タッチボタン</span>
         <span class="seg">
           <button type="button" data-touch="auto">自動</button>
           <button type="button" data-touch="on">表示</button>
           <button type="button" data-touch="off">非表示</button>
         </span>
       </div>
-      <p style="margin-top:10px; font-size:13px; color:#aaa;">設定はこのブラウザに保存されるよ。</p>
+      <div class="setrow"><span id="setLangLabel">🌐 言語 / Language</span>
+        <span class="seg">
+          <button type="button" data-lang="ja">日本語</button>
+          <button type="button" data-lang="en">English</button>
+        </span>
+      </div>
+      <p id="setNote" style="margin-top:10px; font-size:13px; color:#aaa;">設定はこのブラウザに保存されるよ。</p>
       <button id="setCloseBtn" class="bigbtn blue" type="button">閉じる</button>
     </div>
   </div>
@@ -150,6 +163,10 @@
    外部ライブラリなし・1ファイル完結。
    ========================================================= */
 const TILE = 40, COLS = 24, ROWS = 13, W = 960, H = 520;
+const AREAS = 5, AREA_W = 960; // 1エリア＝旧1レベル分の幅
+const Y_OFF = 3; // 屋根裏（隠し部屋）分の行オフセット
+const WORLD_COLS = COLS * AREAS, WORLD_ROWS = ROWS + Y_OFF;
+const WORLD_W = WORLD_COLS * TILE, WORLD_H = WORLD_ROWS * TILE;
 const GRAV = 0.65, MOVE = 3.4, JUMP_V = -12, MAX_FALL = 14;
 
 const LEVELS = [
@@ -209,7 +226,7 @@ const LEVELS = [
   },
   {
     name: "LEVEL 4 — 動くリフト",
-    lifts: [{ x: 400, yLow: 400, yHigh: 200, w: 80 }],
+    lifts: [{ x: 400, yLow: 400, yHigh: 200, w: 120 }],
     rows: [
       "........................",
       "........................",
@@ -228,7 +245,7 @@ const LEVELS = [
   },
   {
     name: "LEVEL 5 — 最後の試練",
-    lifts: [{ x: 720, yLow: 360, yHigh: 200, w: 80 }],
+    lifts: [{ x: 680, yLow: 360, yHigh: 200, w: 120 }],
     rows: [
       "............########....",
       "............########....",
@@ -240,21 +257,105 @@ const LEVELS = [
       ".........o..............",
       "........bbb.............",
       "........................",
-      ".S...aaa.....g.^^^......",
+      ".S...aaa....Cg..^^^.....",
       "#####......#############",
       "#####......#############",
     ],
   },
 ];
 
+// ---------- チュートリアル看板（ワールド座標） ----------
+const SIGNS = [
+  { x: 200, y: 524, key: "sign1" },
+  { x: 380, y: 524, key: "sign2" },
+  { x: 2140, y: 524, key: "sign3" },
+  { x: 3200, y: 524, key: "sign4" },
+];
+
+// ---------- 日英切り替え ----------
+const I18N = {
+  ja: {
+    titleDesc: "白の世界と黒の世界。同じ場所に、違う足場がある。<br>世界を切り替えて、旗を目指そう。",
+    titleTips: "🟨 黄色の足場は白の世界だけ、🟦 青の足場は黒の世界だけにあるよ。<br>🟧 オレンジのリフトは、世界を切り替えると上下に動くよ。🔺 トゲに触れたらミス。<br>半透明の足場は、もう片方の世界のものだよ。",
+    start: "▶ はじめる", cont: "▶ つづきから", langBtn: "🌐 English", again: "もう一度遊ぶ",
+    pauseTitle: "⏸ ポーズ中", pauseDesc: "休憩したら、再開ボタンを押してね。", resume: "▶ 再開する",
+    warpTitle: "🗺 起動済みの中間ポイント（タップでワープ）", warpNone: "まだ中間ポイントを起動していないよ。",
+    setTitle: "⚙ 設定", setSound: "🔊 サウンド", setShake: "📳 画面の揺れ", setTouch: "🎮 タッチボタン",
+    setLang: "🌐 言語 / Language", setNote: "設定はこのブラウザに保存されるよ。", setClose: "閉じる",
+    worldWhite: "☀ 白の世界", worldBlack: "🌙 黒の世界",
+    worldLabelWhite: "○ 白の世界", worldLabelBlack: "● 黒の世界",
+    checkpoint: "中間",
+    sign1: "←→ で移動。Shift で白と黒の世界を切り替えよう",
+    sign2: "黄色の足場は白の世界だけ、青の足場は黒の世界だけにあるよ",
+    sign3: "紫のブロックの上で Shift を押している間、重力が逆転するよ",
+    sign4: "世界を切り替えると、オレンジのリフトが上下に動くよ",
+    gravOn: "⇅ 逆転中",
+    endClear: "🏆 ゲームクリア！", coinMaster: "🏆 COIN MASTER",
+    noGrav: "👑 重力操作なしでクリア！すごい！",
+    gravHint: "💡 実は、重力操作（紫ブロック）を1回も使わずにクリアする隠しルートがあるよ！挑戦してみよう！",
+    bestNew: "🎉 新記録！ベストタイムを更新したよ。", best: "ベストタイム：",
+    muteOn: "🔊 音あり", muteOff: "🔇 音なし", pause: "⏸ ポーズ", settings: "⚙ 設定",
+    touchAuto: "自動", touchOn: "表示", touchOff: "非表示",
+  },
+  en: {
+    titleDesc: "A white world and a black world. Same place, different platforms.<br>Switch worlds and reach the flag.",
+    titleTips: "🟨 Yellow platforms exist only in the white world; 🟦 blue ones only in the black world.<br>🟧 The orange lift moves up and down when you switch worlds. 🔺 Spikes are deadly.<br>Faint platforms belong to the other world.",
+    start: "▶ Start", cont: "▶ Continue", langBtn: "🌐 日本語", again: "Play again",
+    pauseTitle: "⏸ Paused", pauseDesc: "Take a break, then press resume.", resume: "▶ Resume",
+    warpTitle: "🗺 Activated checkpoints (tap to warp)", warpNone: "No checkpoints activated yet.",
+    setTitle: "⚙ Settings", setSound: "🔊 Sound", setShake: "📳 Screen shake", setTouch: "🎮 Touch buttons",
+    setLang: "🌐 Language", setNote: "Settings are saved in this browser.", setClose: "Close",
+    worldWhite: "☀ White world", worldBlack: "🌙 Black world",
+    worldLabelWhite: "○ White world", worldLabelBlack: "● Black world",
+    checkpoint: "Checkpoint",
+    sign1: "Move with ←→. Press Shift to switch between the white and black worlds.",
+    sign2: "Yellow platforms exist only in the white world; blue ones only in the black world.",
+    sign3: "While standing on a purple block, hold Shift to reverse gravity.",
+    sign4: "Switching worlds moves the orange lift up and down.",
+    gravOn: "⇅ Reversed",
+    endClear: "🏆 You cleared the game!", coinMaster: "🏆 COIN MASTER",
+    noGrav: "👑 Cleared without using gravity! Amazing!",
+    gravHint: "💡 There is a hidden route to clear the game without using gravity (purple blocks) even once! Give it a try!",
+    bestNew: "🎉 New record! Best time updated.", best: "Best time: ",
+    muteOn: "🔊 Sound on", muteOff: "🔇 Muted", pause: "⏸ Pause", settings: "⚙ Settings",
+    touchAuto: "Auto", touchOn: "Show", touchOff: "Hide",
+  },
+};
+let lang = "ja";
+const t = key => (I18N[lang] && I18N[lang][key]) || I18N.ja[key] || key;
+function applyI18n() {
+  $("titleDesc").innerHTML = t("titleDesc");
+  $("titleTips").innerHTML = t("titleTips");
+  $("startBtn").textContent = t("start");
+  $("continueBtn").textContent = t("cont");
+  $("langBtn").textContent = t("langBtn");
+  $("againBtn").textContent = t("again");
+  $("pauseBtn").textContent = t("pause");
+  $("setBtn").textContent = t("settings");
+  $("pauseTitle").textContent = t("pauseTitle");
+  $("pauseDesc").textContent = t("pauseDesc");
+  $("resumeBtn").textContent = t("resume");
+  $("setTitle").textContent = t("setTitle");
+  $("setSoundLabel").textContent = t("setSound");
+  $("setShakeLabel").textContent = t("setShake");
+  $("setTouchLabel").textContent = t("setTouch");
+  $("setLangLabel").textContent = t("setLang");
+  $("setNote").textContent = t("setNote");
+  $("setCloseBtn").textContent = t("setClose");
+  document.querySelectorAll("[data-lang]").forEach(b => b.classList.toggle("on", b.dataset.lang === lang));
+  updateHUD();
+}
+
 // ---------- settings ----------
-const DEF_SETTINGS = { sound: true, touch: "auto", shake: true };
+const DEF_SETTINGS = { sound: true, touch: "auto", shake: true, lang: "ja" };
 let settings = { ...DEF_SETTINGS };
 try {
   const saved = JSON.parse(localStorage.getItem("shift_settings_v1") || "{}");
   settings = { ...DEF_SETTINGS, ...saved };
 } catch (e) { /* 設定が読めなくても初期値で遊べる */ }
+lang = settings.lang || "ja";
 function saveSettings() {
+  settings.lang = lang;
   try { localStorage.setItem("shift_settings_v1", JSON.stringify(settings)); } catch (e) { /* 保存できなくても遊べる */ }
 }
 
@@ -264,62 +365,130 @@ const ctx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
 
 let status = "title"; // title | playing | clear | end | pause
-let levelIndex = 0, world = 0; // 0 = 白, 1 = 黒
+let world = 0; // 0 = 白, 1 = 黒
 let coinsGot = 0, coinsTotal = 0, deaths = 0, timeMs = 0;
 let shiftCooldown = 0, flash = 0, shake = 0;
 let muted = !settings.sound;
 let levelTimeMs = 0;
 let particles = [];
-let level = null; // parsed level
+let ghosts = []; // Shift切り替え時の残像
+let worldData = null; // 5エリアをつなげた1つの世界
 let player = null;
 let gravFlip = false, gravDir = 1; // 1 = 下向き, -1 = 上向き（逆転中）
 let standingOnLift = false;
+let usedGravity = false; // この周回で重力反転を使ったか
+let camX = 0, camY = 0; // カメラ（ワールド座標）
+let respawnPoint = null, respawnCoins = null; // 最後に起動した中間ポイント
+let saveData = null; // localStorage の進行状況
+let editing = false; // マップエディタモード（Eキーで切り替え）
+let editKind = "#"; // エディタで置くもの（1:# 2:a 3:b 4:g 5:^ 6:o）
+const EDIT_KINDS = { Digit1: "#", Digit2: "a", Digit3: "b", Digit4: "g", Digit5: "^", Digit6: "o" };
+const EDIT_KIND_NAMES = { "#": "壁", a: "黄足場", b: "青足場", g: "重力", "^": "トゲ", o: "コイン" };
 
-function parseLevel(def) {
-  const solids = [], spikes = [], coins = [], gravTiles = [];
+// ---------- セーブ ----------
+const SAVE_KEY = "shift_save_v1";
+function loadSave() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+    if (s && typeof s === "object") return { checkpoints: [], coins: [], bestMs: null, cleared: false, noGravClear: false, ...s };
+  } catch (e) { /* 読めなくても最初から遊べる */ }
+  return { checkpoints: [], coins: [], bestMs: null, cleared: false, noGravClear: false };
+}
+function writeSave() {
+  if (!worldData) return;
+  saveData.checkpoints = worldData.checkpoints.map(c => c.active);
+  saveData.coins = worldData.coins.map(c => c.got);
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); } catch (e) { /* 保存できなくても遊べる */ }
+}
+saveData = loadSave();
+
+// ---------- 世界の構築（5エリアを横につなげる） ----------
+function buildWorld() {
+  const solids = [], spikes = [], coins = [], gravTiles = [], lifts = [], checkpoints = [];
   let spawn = { x: 60, y: 400 }, goal = { x: 880, y: 400 };
-  def.rows.forEach((row, r) => {
-    for (let c = 0; c < COLS; c++) {
-      const ch = row[c] || ".";
-      const x = c * TILE, y = r * TILE;
-      if (ch === "#" || ch === "a" || ch === "b" || ch === "g") solids.push({ x, y, kind: ch });
-      if (ch === "g") gravTiles.push({ x, y });
-      else if (ch === "^" || ch === "x" || ch === "y") spikes.push({ x, y, kind: ch });
-      else if (ch === "o") coins.push({ x: x + TILE / 2, y: y + TILE / 2, got: false });
-      else if (ch === "S") spawn = { x: x + 6, y: y + 4 };
-      else if (ch === "G") goal = { x, y };
-    }
+  LEVELS.forEach((def, ai) => {
+    const ox = ai * AREA_W, oy = Y_OFF * TILE;
+    def.rows.forEach((row, r) => {
+      for (let c = 0; c < COLS; c++) {
+        const ch = row[c] || ".";
+        const x = ox + c * TILE, y = oy + r * TILE;
+        if (ch === "#" || ch === "a" || ch === "b" || ch === "g") solids.push({ x, y, kind: ch });
+        if (ch === "g") gravTiles.push({ x, y });
+        else if (ch === "^" || ch === "x" || ch === "y") spikes.push({ x, y, kind: ch });
+        else if (ch === "o") coins.push({ x: x + TILE / 2, y: y + TILE / 2, got: false });
+        else if (ch === "C") checkpoints.push({ x: x + TILE / 2, y: y + TILE / 2, active: false, name: "エリア5・中間", spawn: null, coinsSnap: null });
+        else if (ch === "S") { if (ai === 0) spawn = { x: x + 6, y: y + 4 }; }
+        else if (ch === "G") {
+          if (ai === AREAS - 1) goal = { x, y };
+          else checkpoints.push({ x: x + TILE / 2, y: y + TILE / 2, active: false, name: "エリア" + (ai + 1) + "・ゴール", spawn: null, coinsSnap: null });
+        }
+      }
+    });
+    (def.lifts || []).forEach(l => lifts.push({ x: ox + l.x, yLow: oy + l.yLow, yHigh: oy + l.yHigh, w: l.w, h: 20, t: 0, y: oy + l.yLow, prevY: oy + l.yLow }));
   });
-  const lifts = (def.lifts || []).map(l => ({ x: l.x, yLow: l.yLow, yHigh: l.yHigh, w: l.w, h: 20, t: 0, y: l.yLow, prevY: l.yLow }));
-  return { name: def.name, solids, spikes, coins, gravTiles, lifts, spawn, goal };
+  // 隠し部屋（屋根裏・L3エリアの上）。床は row 0、コインは row 1。
+  // 扉は L3 の天井（world row 3・4）の col 57 にあり、初回クリア後に開く。
+  for (let c = 54; c <= 60; c++) solids.push({ x: c * TILE, y: 0, kind: "#" });
+  coins.push({ x: 55 * TILE + TILE / 2, y: 1 * TILE + TILE / 2, got: false, hidden: true });
+  coins.push({ x: 59 * TILE + TILE / 2, y: 1 * TILE + TILE / 2, got: false, hidden: true });
+  // 扉（天井の2マス分）。kind "D" は初回クリア前だけ固体。
+  solids.push({ x: 57 * TILE, y: 3 * TILE, kind: "D" });
+  solids.push({ x: 57 * TILE, y: 4 * TILE, kind: "D" });
+  return { solids, spikes, coins, gravTiles, lifts, checkpoints, spawn, goal };
 }
 
-function loadLevel(i) {
-  levelIndex = i;
-  level = parseLevel(LEVELS[i]);
-  coinsTotal = LEVELS.reduce((n, d) => n + (d.rows.join("").match(/o/g) || []).length, 0);
-  respawn();
+function loadWorld() {
+  worldData = buildWorld();
+  coinsTotal = worldData.coins.length;
+  usedGravity = false;
+  respawnPoint = null; respawnCoins = null;
+  camX = 0; camY = Y_OFF * TILE;
+  // セーブがあれば中間ポイントとコインを復元する（つづきから用）
+  if (saveData.checkpoints.length === worldData.checkpoints.length) {
+    worldData.checkpoints.forEach((c, i) => { c.active = !!saveData.checkpoints[i]; });
+  }
+  if (saveData.coins.length === worldData.coins.length) {
+    worldData.coins.forEach((c, i) => { c.got = !!saveData.coins[i]; });
+  }
+  resetRun();
   levelTimeMs = 0;
   world = 0;
   gravFlip = false; gravDir = 1; standingOnLift = false;
-  $("hudLevel").textContent = level.name;
   updateHUD();
 }
 
+function resetRun() {
+  respawn();
+}
+
 function respawn() {
+  // 最後に起動した中間ポイントから、なければスタートから復活する
+  const sp = respawnPoint || worldData.spawn;
   player = {
-    x: level.spawn.x, y: level.spawn.y, w: 26, h: 34,
+    x: sp.x, y: sp.y, w: 26, h: 34,
     vx: 0, vy: 0, onGround: false, coyote: 0, jbuf: 0, face: 1,
   };
   gravFlip = false; gravDir = 1; standingOnLift = false;
-  level.coins.forEach(c => { c.got = false; });
+  world = 0; // 復活はいつも白の世界から（リフトも下に戻る）
+  worldData.lifts.forEach(l => { l.t = 0; l.y = l.yLow; l.prevY = l.yLow; });
+  if (respawnPoint && respawnCoins) {
+    worldData.coins.forEach((c, i) => { c.got = respawnCoins[i]; });
+  } else {
+    worldData.coins.forEach(c => { c.got = false; });
+  }
+  camX = Math.max(0, Math.min(player.x + player.w / 2 - W / 2, WORLD_W - W));
+  camY = Math.max(0, Math.min(player.y + player.h / 2 - H / 2, WORLD_H - H));
   recountCoins();
 }
 
 function recountCoins() {
-  coinsGot = LEVELS.slice(0, levelIndex).reduce((n, d) => n + (d.rows.join("").match(/o/g) || []).length, 0)
-    + level.coins.filter(c => c.got).length;
+  coinsGot = worldData.coins.filter(c => c.got).length;
   updateHUD();
+}
+
+function areaIndex() {
+  if (!player) return 0;
+  return Math.max(0, Math.min(AREAS - 1, Math.floor(player.x / AREA_W)));
 }
 
 // ---------- input ----------
@@ -328,13 +497,26 @@ const KEYMAP = {
   ArrowLeft: "left", KeyA: "left",
   ArrowRight: "right", KeyD: "right",
   ArrowUp: "jump", Space: "jump", KeyW: "jump",
+  ArrowDown: "down", KeyS: "down",
   ShiftLeft: "shift", ShiftRight: "shift", KeyX: "shift", KeyK: "shift",
 };
 window.addEventListener("keydown", e => {
-  if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) e.preventDefault();
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
+  // マップエディタ（Eキーで切り替え。編集中は 1〜6 で置くもの、矢印でカメラ移動、C でコピー）
+  if (e.code === "KeyE" && (status === "playing" || editing)) {
+    editing = !editing;
+    if (editing) { status = "pause"; $("editBar").classList.remove("hidden"); updateEditBar(); }
+    else { status = "playing"; $("editBar").classList.add("hidden"); }
+    return;
+  }
   const a = KEYMAP[e.code];
   if (a) keys[a] = true;
+  if (editing) {
+    if (EDIT_KINDS[e.code]) { editKind = EDIT_KINDS[e.code]; updateEditBar(); }
+    if (e.code === "KeyC") copyWorldData();
+    return;
+  }
   if (a === "jump" && player) player.jbuf = 6;
   if (a === "shift") tryShift();
   if (e.code === "KeyR" && status === "playing") { die(true); }
@@ -359,6 +541,79 @@ bindTouch("tLeft", "left");
 bindTouch("tRight", "right");
 bindTouch("tJump", "jump", () => { if (player) player.jbuf = 6; });
 bindTouch("tShift", "shift", () => tryShift());
+// ---------- マップエディタ（開発用） ----------
+function updateEditBar() {
+  $("editBar").textContent = `🛠 エディタ：${EDIT_KIND_NAMES[editKind]}（1:壁 2:黄 3:青 4:重力 5:トゲ 6:コイン）　クリックで配置・右クリックで削除　矢印でカメラ移動　Cでコピー　Eで終了`;
+}
+function editTileAt(clientX, clientY, remove) {
+  if (!worldData) return;
+  const rect = cv.getBoundingClientRect();
+  const sx = (clientX - rect.left) * (W / rect.width);
+  const sy = (clientY - rect.top) * (H / rect.height);
+  const wx = sx + camX, wy = sy + camY;
+  const col = Math.floor(wx / TILE), row = Math.floor(wy / TILE);
+  if (col < 0 || col >= WORLD_COLS || row < 0 || row >= WORLD_ROWS) return;
+  const x = col * TILE, y = row * TILE;
+  // そのマスにあるものを全部消す
+  worldData.solids = worldData.solids.filter(s => !(s.x === x && s.y === y));
+  worldData.gravTiles = worldData.gravTiles.filter(g => !(g.x === x && g.y === y));
+  worldData.spikes = worldData.spikes.filter(s => !(s.x === x && s.y === y));
+  worldData.coins = worldData.coins.filter(c => !(Math.floor(c.x / TILE) === col && Math.floor(c.y / TILE) === row));
+  if (remove) { recountCoins(); return; }
+  if (editKind === "#") worldData.solids.push({ x, y, kind: "#" });
+  else if (editKind === "a") worldData.solids.push({ x, y, kind: "a" });
+  else if (editKind === "b") worldData.solids.push({ x, y, kind: "b" });
+  else if (editKind === "g") { worldData.solids.push({ x, y, kind: "g" }); worldData.gravTiles.push({ x, y }); }
+  else if (editKind === "^") worldData.spikes.push({ x, y, kind: "^" });
+  else if (editKind === "o") worldData.coins.push({ x: x + TILE / 2, y: y + TILE / 2, got: false });
+  coinsTotal = worldData.coins.length;
+  recountCoins();
+}
+function copyWorldData() {
+  if (!worldData) return;
+  // ワールドをタイル文字の行配列に戻す（隠し部屋と扉は D として残す）
+  const grid = Array.from({ length: WORLD_ROWS }, () => Array(WORLD_COLS).fill("."));
+  for (const s of worldData.solids) {
+    const c = Math.floor(s.x / TILE), r = Math.floor(s.y / TILE);
+    if (r >= 0 && r < WORLD_ROWS && c >= 0 && c < WORLD_COLS) grid[r][c] = s.kind;
+  }
+  for (const s of worldData.spikes) {
+    const c = Math.floor(s.x / TILE), r = Math.floor(s.y / TILE);
+    if (r >= 0 && r < WORLD_ROWS && c >= 0 && c < WORLD_COLS) grid[r][c] = s.kind;
+  }
+  for (const c of worldData.coins) {
+    const col = Math.floor(c.x / TILE), r = Math.floor(c.y / TILE);
+    if (r >= 0 && r < WORLD_ROWS && col >= 0 && col < WORLD_COLS) grid[r][col] = "o";
+  }
+  // スタートとゴールと中間ポイントを書き戻す
+  const sp = worldData.spawn, gl = worldData.goal;
+  grid[Math.floor(sp.y / TILE)][Math.floor(sp.x / TILE)] = "S";
+  grid[Math.floor(gl.y / TILE)][Math.floor(gl.x / TILE)] = "G";
+  for (const cp of worldData.checkpoints) {
+    const c = Math.floor(cp.x / TILE), r = Math.floor(cp.y / TILE);
+    if (r >= 0 && r < WORLD_ROWS && c >= 0 && c < WORLD_COLS) grid[r][c] = "C";
+  }
+  const data = {
+    rows: grid.map(r => r.join("")),
+    lifts: worldData.lifts.map(l => ({ x: l.x, yLow: l.yLow, yHigh: l.yHigh, w: l.w })),
+  };
+  const text = JSON.stringify(data, null, 1);
+  const done = () => { $("editBar").textContent = "📋 コピーしたよ！（rows + lifts の JSON）"; setTimeout(updateEditBar, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => { $("editBar").textContent = "コピーできなかった…（ブラウザの許可が必要かも）"; });
+  } else {
+    $("editBar").textContent = "このブラウザはコピーに対応していないよ";
+  }
+}
+cv.addEventListener("pointerdown", e => {
+  if (!editing) return;
+  e.preventDefault();
+  editTileAt(e.clientX, e.clientY, e.button === 2);
+});
+cv.addEventListener("contextmenu", e => { if (editing) e.preventDefault(); });
+
+// 長押しメニュー（選択・コピー）が出るとボタンが効かなくなるので、ゲーム内では出さない
+document.addEventListener("contextmenu", e => e.preventDefault());
 
 // ---------- audio (tiny synth, no assets) ----------
 let actx = null;
@@ -389,16 +644,17 @@ function toggleMute() {
   settings.sound = !settings.sound;
   muted = !settings.sound;
   saveSettings();
-  $("muteBtn").textContent = muted ? "🔇 音なし" : "🔊 音あり";
+  $("muteBtn").textContent = muted ? t("muteOff") : t("muteOn");
   $("setSound").checked = settings.sound;
 }
 
 // ---------- collision ----------
 function solidAt(col, row, w) {
-  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return false;
-  for (const s of level.solids) {
+  if (col < 0 || col >= WORLD_COLS || row < 0 || row >= WORLD_ROWS) return false;
+  for (const s of worldData.solids) {
     if (s.x === col * TILE && s.y === row * TILE) {
       if (s.kind === "#" || s.kind === "g") return true;
+      if (s.kind === "D") return !saveData.cleared; // 隠し扉：初回クリア前だけ固体
       if (s.kind === "a") return w === 0;
       if (s.kind === "b") return w === 1;
     }
@@ -415,7 +671,7 @@ function rectHitsSolid(x, y, w, h, worldToCheck) {
 }
 function touchingGravity() {
   if (!player) return false;
-  for (const g of level.gravTiles) {
+  for (const g of worldData.gravTiles) {
     if (player.x - 2 < g.x + TILE && player.x + player.w + 2 > g.x &&
         player.y - 2 < g.y + TILE && player.y + player.h + 2 > g.y) return true;
   }
@@ -423,7 +679,7 @@ function touchingGravity() {
 }
 function liftOverlap() {
   if (!player) return null;
-  for (const l of level.lifts) {
+  for (const l of worldData.lifts) {
     if (player.x < l.x + l.w && player.x + player.w > l.x &&
         player.y < l.y + l.h && player.y + player.h > l.y) return l;
   }
@@ -442,6 +698,8 @@ function tryShift() {
   shiftCooldown = 0.35;
   flash = 1;
   sShift();
+  // 切り替え前の姿を残像として残す
+  ghosts.push({ x: player.x, y: player.y, w: player.w, h: player.h, face: player.face, life: 0.35, max: 0.35, col: other === 0 ? "#ffb703" : "#4cc9f0" });
   for (let i = 0; i < 22; i++) {
     particles.push({
       x: player.x + player.w / 2, y: player.y + player.h / 2,
@@ -479,12 +737,13 @@ function step(dt) {
   if (keys.shift && touchingGravity()) {
     if (!gravFlip) sFlip();
     gravFlip = true;
+    usedGravity = true;
   }
   if (!keys.shift) gravFlip = false;
   gravDir = gravFlip ? -1 : 1;
 
   // リフト：世界の切り替えで上下する。乗っていたら運ぶ
-  for (const l of level.lifts) {
+  for (const l of worldData.lifts) {
     const target = world; // 白=下(0)、黒=上(1)
     l.prevY = l.y;
     if (l.t < target) l.t = Math.min(target, l.t + dt / 60 * 1.4);
@@ -513,6 +772,14 @@ function step(dt) {
     player.vy = JUMP_V * gravDir;
     player.onGround = false; player.coyote = 0; player.jbuf = 0;
     sJump();
+    // ジャンプ時の砂埃
+    for (let i = 0; i < 5; i++) {
+      particles.push({
+        x: player.x + player.w / 2 + (Math.random() - 0.5) * 18, y: player.y + player.h,
+        vx: (Math.random() - 0.5) * 2, vy: -Math.random() * 1.5,
+        life: 0.35, max: 0.35, col: "#cbb89d",
+      });
+    }
   }
 
   player.vy = Math.max(-MAX_FALL, Math.min(MAX_FALL, player.vy + GRAV * gravDir * dt));
@@ -529,12 +796,14 @@ function step(dt) {
     for (let r = r0; r <= r1; r++) if (solidAt(c, r, world)) { player.x = (c + 1) * TILE + 0.01; player.vx = 0; break; }
   }
   if (player.x < 0) { player.x = 0; player.vx = 0; }
-  if (player.x + player.w > W) { player.x = W - player.w; player.vx = 0; }
+  if (player.x + player.w > WORLD_W) { player.x = WORLD_W - player.w; player.vx = 0; }
 
   // Y移動と衝突（重力方向が下なら下側が地面、上なら上側が地面）
   const wasGround = player.onGround;
   player.onGround = false;
   standingOnLift = false;
+  const prevBottom = player.y + player.h; // リフトの一方通行判定用（Y移動前の足元）
+  const vyBefore = player.vy; // 着地時の砂埃用（衝突で vy が 0 になる前の速さ）
   player.y += player.vy * dt;
   if (player.vy * gravDir > 0) { // 重力方向へ移動中 → 着地側
     if (gravDir === 1) {
@@ -559,75 +828,116 @@ function step(dt) {
   }
   if (player.onGround) player.coyote = 6;
   else if (wasGround) player.coyote = 6;
-
-  // リフトとの衝突（重なりを一番小さい方向へ押し出す）
-  const lift = liftOverlap();
-  if (lift) {
-    const overlapTop = player.y + player.h - lift.y;
-    const overlapBottom = lift.y + lift.h - player.y;
-    const overlapLeft = player.x + player.w - lift.x;
-    const overlapRight = lift.x + lift.w - player.x;
-    const min = Math.min(overlapTop, overlapBottom, overlapLeft, overlapRight);
-    if (min === overlapTop) {
-      player.y = lift.y - player.h; player.vy = 0; player.onGround = true; standingOnLift = true; player.coyote = 6;
-    } else if (min === overlapBottom) {
-      player.y = lift.y + lift.h + 0.01; if (player.vy < 0) player.vy = 0;
-    } else if (min === overlapLeft) {
-      player.x = lift.x - player.w - 0.01; if (player.vx > 0) player.vx = 0;
-    } else {
-      player.x = lift.x + lift.w + 0.01; if (player.vx < 0) player.vx = 0;
+  // 着地時の砂埃
+  if (player.onGround && !wasGround && Math.abs(vyBefore) > 3) {
+    for (let i = 0; i < 6; i++) {
+      particles.push({
+        x: player.x + player.w / 2 + (Math.random() - 0.5) * 22, y: player.y + player.h,
+        vx: (Math.random() - 0.5) * 2.5, vy: -Math.random() * 1.2,
+        life: 0.4, max: 0.4, col: "#cbb89d",
+      });
     }
+  }
+
+  // リフトとの衝突：上からだけ乗れる一方通行。下や横からはすり抜ける。
+  // （横からも当たると、リフトが壁になって歩けなくなる）
+  const lift = liftOverlap();
+  if (lift && player.vy >= 0 && prevBottom <= lift.y + 2) {
+    player.y = lift.y - player.h; player.vy = 0; player.onGround = true; standingOnLift = true; player.coyote = 6;
   }
 
   // コイン
-  for (const c of level.coins) {
+  for (const c of worldData.coins) {
     if (!c.got && Math.abs(player.x + player.w / 2 - c.x) < 30 && Math.abs(player.y + player.h / 2 - c.y) < 34) {
-      c.got = true; coinsGot++; sCoin(); updateHUD();
+      c.got = true; coinsGot++; sCoin(); updateHUD(); writeSave();
+    }
+  }
+  // 中間ポイント（チェックポイント）：触れたら、ミスしてもここから復活できる
+  for (const cp of worldData.checkpoints) {
+    if (!cp.active && player.onGround &&
+        Math.abs(player.x + player.w / 2 - cp.x) < 34 &&
+        Math.abs(player.y + player.h / 2 - cp.y) < 40) {
+      cp.active = true;
+      cp.spawn = { x: player.x, y: player.y };
+      cp.coinsSnap = worldData.coins.map(c => c.got);
+      respawnPoint = cp.spawn;
+      respawnCoins = cp.coinsSnap;
+      sCoin();
+      writeSave();
+      for (let i = 0; i < 14; i++) {
+        particles.push({
+          x: cp.x, y: cp.y,
+          vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 4 - 1,
+          life: 0.6, max: 0.6, col: "#2ec4b6",
+        });
+      }
     }
   }
   // トゲ
-  for (const s of level.spikes) {
+  for (const s of worldData.spikes) {
     if (s.kind === "^" || (s.kind === "x" && world === 0) || (s.kind === "y" && world === 1)) {
       if (player.x + 4 < s.x + TILE && player.x + player.w - 4 > s.x &&
           player.y + 8 < s.y + TILE && player.y + player.h > s.y + 14) { die(); return; }
     }
   }
   // ゴール（旗のまわりは少し広めに判定。天井から降りてきた勢いで通り過ぎても届くように）
-  if (player.x + player.w > level.goal.x - 40 && player.x < level.goal.x + TILE * 2 &&
-      player.y + player.h > level.goal.y - 20 && player.y < level.goal.y + TILE * 2) {
-    levelClear();
+  if (player.x + player.w > worldData.goal.x - 40 && player.x < worldData.goal.x + TILE * 2 &&
+      player.y + player.h > worldData.goal.y - 20 && player.y < worldData.goal.y + TILE * 2) {
+    worldClear();
     return;
   }
   // 落下（下にも上にも落ちたらミス）
-  if (player.y > H + 60 || player.y < -120) { die(); return; }
+  if (player.y > WORLD_H + 60 || player.y < -120) { die(); return; }
 
-  // パーティクル
+  // パーティクルと残像
   particles = particles.filter(p => (p.life -= dt / 60) > 0);
   for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 0.12 * dt; }
+  ghosts = ghosts.filter(g => (g.life -= dt / 60) > 0);
+
+  // カメラ：プレイヤーを中心に滑らかに追従。向いている向きに少し先読みする。
+  const lookX = player.face * 70;
+  const tx = Math.max(0, Math.min(player.x + player.w / 2 - W / 2 + lookX, WORLD_W - W));
+  const ty = Math.max(0, Math.min(player.y + player.h / 2 - H / 2, WORLD_H - H));
+  camX += (tx - camX) * 0.12;
+  camY += (ty - camY) * 0.12;
+  $("hudLevel").textContent = LEVELS[areaIndex()].name;
+
+  // チュートリアル看板：近づいたら下のバーにヒントを出す
+  let nearSign = null;
+  for (const sg of SIGNS) {
+    if (Math.abs(player.x + player.w / 2 - (sg.x + 17)) < 130 && Math.abs(player.y + player.h / 2 - (sg.y + 18)) < 120) { nearSign = sg; break; }
+  }
+  const bar = $("signBar");
+  if (nearSign) {
+    bar.textContent = "💡 " + t(nearSign.key);
+    bar.classList.remove("hidden");
+  } else {
+    bar.classList.add("hidden");
+  }
 }
 
-function levelClear() {
+function worldClear() {
   sClear();
-  const t = levelTimeMs;
-  if (levelIndex + 1 >= LEVELS.length) {
-    status = "end";
-    $("endText").textContent = `全${LEVELS.length}レベル クリア！　タイム ${fmtTime(timeMs)}　／　コイン ${coinsGot} / ${coinsTotal}　／　ミス ${deaths}回`;
-    try {
-      const best = Number(localStorage.getItem("shift_best_ms") || Infinity);
-      if (timeMs < best) {
-        localStorage.setItem("shift_best_ms", String(timeMs));
-        $("bestText").textContent = "🎉 新記録！ベストタイムを更新したよ。";
-      } else {
-        $("bestText").textContent = `ベストタイム：${fmtTime(best)}`;
-      }
-    } catch (e) { $("bestText").textContent = ""; }
-    $("endOv").classList.remove("hidden");
-  } else {
-    status = "clear";
-    $("clearTitle").textContent = `🎉 ${level.name} クリア！`;
-    $("clearText").textContent = `タイム ${fmtTime(t)}　／　コイン ${coinsGot} / ${coinsTotal}`;
-    $("clearOv").classList.remove("hidden");
-  }
+  status = "end";
+  saveData.cleared = true;
+  if (!usedGravity) saveData.noGravClear = true;
+  if (!saveData.bestMs || timeMs < saveData.bestMs) saveData.bestMs = timeMs;
+  writeSave();
+  $("endText").textContent = `全世界クリア！　タイム ${fmtTime(timeMs)}　／　コイン ${coinsGot} / ${coinsTotal}　／　ミス ${deaths}回`;
+  try {
+    const best = Number(localStorage.getItem("shift_best_ms") || Infinity);
+    if (timeMs < best) {
+      localStorage.setItem("shift_best_ms", String(timeMs));
+      $("bestText").textContent = t("bestNew");
+    } else {
+      $("bestText").textContent = `${t("best")}${fmtTime(best)}`;
+    }
+  } catch (e) { $("bestText").textContent = ""; }
+  // 重力なしクリアは王冠つきの特別な祝福。使ったなら隠しルートへの挑戦を促す。
+  $("endChallenge").textContent = usedGravity ? t("gravHint") : t("noGrav");
+  // 全コイン収集ボーナス
+  $("endTitle").textContent = coinsGot === coinsTotal ? t("coinMaster") : t("endClear");
+  $("endOv").classList.remove("hidden");
   updateHUD();
 }
 
@@ -665,8 +975,34 @@ function draw() {
     ctx.beginPath(); ctx.ellipse(420, 55, 70, 20, 0, 0, 7); ctx.fill();
   }
 
+  // ワールド（カメラでスクロールする部分）
+  ctx.save();
+  ctx.translate(-camX, -camY);
+  const inView = (x, y) => x > camX - 60 && x < camX + W + 60 && y > camY - 60 && y < camY + H + 60;
+
   // 足場（もう片方の世界のは半透明で見せる）
-  for (const s of level.solids) {
+  for (const s of worldData.solids) {
+    if (!inView(s.x, s.y)) continue;
+    if (s.kind === "D") {
+      // 隠し扉：初回クリア前は閉まっていて、クリア後は開く
+      if (saveData.cleared) {
+        ctx.strokeStyle = "#d4a017"; ctx.lineWidth = 3;
+        ctx.strokeRect(s.x + 2, s.y + 2, TILE - 4, TILE - 4);
+        ctx.fillStyle = "#2ec4b6";
+        ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("開", s.x + TILE / 2, s.y + TILE / 2);
+      } else {
+        ctx.fillStyle = "#8b5e3c";
+        ctx.fillRect(s.x, s.y, TILE, TILE);
+        ctx.fillStyle = "#d4a017";
+        ctx.fillRect(s.x + 14, s.y + 16, 12, 10);
+        ctx.beginPath(); ctx.arc(s.x + 20, s.y + 16, 5, 0, 7); ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("🔒", s.x + TILE / 2, s.y + 32);
+      }
+      continue;
+    }
     const mine = s.kind === "#" || s.kind === "g" || (s.kind === "a" && world === 0) || (s.kind === "b" && world === 1);
     if (s.kind === "#") ctx.fillStyle = dark ? "#5a5a8a" : "#7a6a53";
     else if (s.kind === "a") ctx.fillStyle = "#ffb703";
@@ -690,7 +1026,7 @@ function draw() {
   }
 
   // リフト（移動レールを点線で、リフト本体をオレンジで）
-  for (const l of level.lifts) {
+  for (const l of worldData.lifts) {
     ctx.strokeStyle = dark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.3)";
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 6]);
@@ -709,7 +1045,8 @@ function draw() {
   }
 
   // トゲ
-  for (const s of level.spikes) {
+  for (const s of worldData.spikes) {
+    if (!inView(s.x, s.y)) continue;
     const active = s.kind === "^" || (s.kind === "x" && world === 0) || (s.kind === "y" && world === 1);
     ctx.globalAlpha = active ? 1 : 0.2;
     ctx.fillStyle = active ? "#e63946" : "#999";
@@ -724,8 +1061,8 @@ function draw() {
 
   // コイン
   const now = performance.now() / 300;
-  for (const c of level.coins) {
-    if (c.got) continue;
+  for (const c of worldData.coins) {
+    if (c.got || !inView(c.x, c.y)) continue;
     ctx.save();
     ctx.translate(c.x, c.y + Math.sin(now + c.x) * 3);
     ctx.fillStyle = "#ffd75e";
@@ -738,16 +1075,54 @@ function draw() {
     ctx.restore();
   }
 
+  // 中間ポイント（チェックポイント）：旗。触れると緑になって、ここから復活できる
+  for (const cp of worldData.checkpoints) {
+    if (!inView(cp.x, cp.y)) continue;
+    const cx = cp.x, cy = cp.y;
+    ctx.strokeStyle = cp.active ? "#2ec4b6" : "#888";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx, cy + 20); ctx.lineTo(cx, cy - 18); ctx.stroke();
+    ctx.fillStyle = cp.active ? "#2ec4b6" : "#aaa";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 18); ctx.lineTo(cx + 16, cy - 12); ctx.lineTo(cx, cy - 6);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = dark ? "rgba(255,255,255,.7)" : "rgba(0,0,0,.55)";
+    ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(t("checkpoint"), cx, cy - 22);
+  }
+
   // ゴール（旗）
   ctx.strokeStyle = dark ? "#eee" : "#333";
   ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(level.goal.x + 8, level.goal.y + TILE * 2); ctx.lineTo(level.goal.x + 8, level.goal.y - 20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(worldData.goal.x + 8, worldData.goal.y + TILE * 2); ctx.lineTo(worldData.goal.x + 8, worldData.goal.y - 20); ctx.stroke();
   ctx.fillStyle = "#2ec4b6";
   ctx.beginPath();
-  ctx.moveTo(level.goal.x + 8, level.goal.y - 20);
-  ctx.lineTo(level.goal.x + 34, level.goal.y - 10);
-  ctx.lineTo(level.goal.x + 8, level.goal.y);
+  ctx.moveTo(worldData.goal.x + 8, worldData.goal.y - 20);
+  ctx.lineTo(worldData.goal.x + 34, worldData.goal.y - 10);
+  ctx.lineTo(worldData.goal.x + 8, worldData.goal.y);
   ctx.closePath(); ctx.fill();
+
+  // チュートリアル看板（木の看板。近づくと下のバーにヒントが出る）
+  for (const sg of SIGNS) {
+    if (!inView(sg.x, sg.y)) continue;
+    ctx.fillStyle = "#8b5e3c";
+    ctx.fillRect(sg.x + 14, sg.y + 10, 5, 26);
+    ctx.fillStyle = "#d9a05b";
+    ctx.fillRect(sg.x, sg.y, 34, 22);
+    ctx.strokeStyle = "#8b5e3c"; ctx.lineWidth = 2;
+    ctx.strokeRect(sg.x, sg.y, 34, 22);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("!", sg.x + 17, sg.y + 12);
+  }
+
+  // Shift切り替え時の残像
+  for (const g of ghosts) {
+    ctx.globalAlpha = Math.max(0, g.life / g.max) * 0.45;
+    ctx.fillStyle = g.col;
+    roundRect(g.x, g.y, g.w, g.h, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
   // プレイヤー（重力反転中は上下さかさま）
   if (player) {
@@ -768,7 +1143,7 @@ function draw() {
     if (gravDir === -1) {
       ctx.fillStyle = "#9b5de5";
       ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-      ctx.fillText("⇅ 逆転中", px + player.w / 2, py - 6);
+      ctx.fillText(t("gravOn"), px + player.w / 2, py - 6);
     }
   }
 
@@ -779,6 +1154,17 @@ function draw() {
     ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 7); ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  // エディタ中はタイルのグリッドを出す
+  if (editing) {
+    ctx.strokeStyle = "rgba(255,255,255,.25)";
+    ctx.lineWidth = 1;
+    const c0 = Math.max(0, Math.floor(camX / TILE)), c1 = Math.min(WORLD_COLS, Math.ceil((camX + W) / TILE));
+    const r0 = Math.max(0, Math.floor(camY / TILE)), r1 = Math.min(WORLD_ROWS, Math.ceil((camY + H) / TILE));
+    for (let c = c0; c <= c1; c++) { ctx.beginPath(); ctx.moveTo(c * TILE, camY); ctx.lineTo(c * TILE, camY + H); ctx.stroke(); }
+    for (let r = r0; r <= r1; r++) { ctx.beginPath(); ctx.moveTo(camX, r * TILE); ctx.lineTo(camX + W, r * TILE); ctx.stroke(); }
+  }
+  ctx.restore(); // カメラここまで（ここから先は画面固定）
 
   // シフトのフラッシュ
   if (flash > 0) {
@@ -793,7 +1179,7 @@ function draw() {
   ctx.font = "bold 15px sans-serif";
   ctx.textAlign = "left"; ctx.textBaseline = "top";
   ctx.fillStyle = dark ? "rgba(255,255,255,.65)" : "rgba(0,0,0,.5)";
-  ctx.fillText(dark ? "● 黒の世界" : "○ 白の世界", 12, 10);
+  ctx.fillText(dark ? t("worldLabelBlack") : t("worldLabelWhite"), 12, 10);
 }
 function roundRect(x, y, w, h, r) {
   ctx.beginPath();
@@ -807,46 +1193,100 @@ function roundRect(x, y, w, h, r) {
 
 function updateHUD() {
   const wEl = $("hudWorld");
-  wEl.textContent = world === 0 ? "☀ 白の世界" : "🌙 黒の世界";
+  wEl.textContent = world === 0 ? t("worldWhite") : t("worldBlack");
   wEl.classList.toggle("dark", world === 1);
   $("hudCoins").textContent = `🪙 ${coinsGot} / ${coinsTotal}`;
   $("hudDeaths").textContent = `💀 ${deaths}`;
   $("hudTime").textContent = `⏱ ${fmtTime(timeMs)}`;
+  if (player && worldData) $("hudLevel").textContent = LEVELS[areaIndex()].name;
 }
 
 // ---------- flow ----------
 function startGame() {
   coinsGot = 0; deaths = 0; timeMs = 0;
   $("titleOv").classList.add("hidden");
-  $("clearOv").classList.add("hidden");
   $("endOv").classList.add("hidden");
-  loadLevel(0);
+  loadWorld();
+  // はじめからはセーブをリセットする（中間ポイント・コインは最初から）
+  saveData.checkpoints = []; saveData.coins = [];
+  worldData.checkpoints.forEach(c => { c.active = false; c.spawn = null; c.coinsSnap = null; });
+  worldData.coins.forEach(c => { c.got = false; });
+  respawnPoint = null; respawnCoins = null;
+  usedGravity = false;
+  writeSave();
+  respawn();
   status = "playing";
   beep(523, 0.12, "triangle", 0.09);
 }
+function continueGame() {
+  $("titleOv").classList.add("hidden");
+  $("endOv").classList.add("hidden");
+  loadWorld();
+  // 最後に起動した中間ポイントから再開する（なければスタートから）
+  const act = worldData.checkpoints.filter(c => c.active);
+  if (act.length) {
+    const cp = act[act.length - 1];
+    respawnPoint = { x: cp.x, y: cp.y - 40 };
+    respawnCoins = worldData.coins.map(c => c.got);
+    respawn();
+  } else {
+    respawn();
+  }
+  status = "playing";
+  beep(523, 0.12, "triangle", 0.09);
+}
+function buildWarpList() {
+  const list = $("warpList");
+  list.innerHTML = "";
+  const act = worldData.checkpoints.filter(c => c.active);
+  const title = document.createElement("p");
+  title.style.margin = "6px 0 2px";
+  title.textContent = t("warpTitle");
+  list.appendChild(title);
+  if (!act.length) {
+    const p = document.createElement("p");
+    p.textContent = t("warpNone");
+    list.appendChild(p);
+    return;
+  }
+  act.forEach(cp => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = `🚩 ${cp.name}`;
+    b.addEventListener("click", () => {
+      respawnPoint = { x: cp.x, y: cp.y - 40 };
+      respawnCoins = cp.coinsSnap || worldData.coins.map(c => c.got);
+      respawn();
+      $("pauseOv").classList.add("hidden");
+      status = "playing";
+    });
+    list.appendChild(b);
+  });
+}
 function togglePause() {
-  if (status === "playing") { status = "pause"; $("pauseOv").classList.remove("hidden"); }
+  if (status === "playing") { status = "pause"; buildWarpList(); $("pauseOv").classList.remove("hidden"); }
   else if (status === "pause") { status = "playing"; $("pauseOv").classList.add("hidden"); }
 }
 $("startBtn").addEventListener("click", startGame);
+$("continueBtn").addEventListener("click", continueGame);
 $("againBtn").addEventListener("click", startGame);
-$("nextBtn").addEventListener("click", () => {
-  $("clearOv").classList.add("hidden");
-  loadLevel(levelIndex + 1);
-  status = "playing";
-});
 $("resumeBtn").addEventListener("click", togglePause);
 $("pauseBtn").addEventListener("click", togglePause);
 $("muteBtn").addEventListener("click", toggleMute);
+$("langBtn").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; saveSettings(); applyI18n(); });
+document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => {
+  lang = b.dataset.lang; saveSettings(); applyI18n();
+}));
 
 // ---------- settings ----------
 function applySettings() {
   document.body.classList.toggle("touch-on", settings.touch === "on");
   document.body.classList.toggle("touch-off", settings.touch === "off");
-  $("muteBtn").textContent = muted ? "🔇 音なし" : "🔊 音あり";
+  $("muteBtn").textContent = muted ? t("muteOff") : t("muteOn");
   $("setSound").checked = settings.sound;
   $("setShake").checked = settings.shake;
   document.querySelectorAll("[data-touch]").forEach(b => b.classList.toggle("on", b.dataset.touch === settings.touch));
+  document.querySelectorAll("[data-lang]").forEach(b => b.classList.toggle("on", b.dataset.lang === lang));
 }
 $("setBtn").addEventListener("click", () => { $("setOv").classList.remove("hidden"); });
 $("setCloseBtn").addEventListener("click", () => { $("setOv").classList.add("hidden"); });
@@ -863,34 +1303,74 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min((now - last) / 16.667, 2.5);
   last = now;
-  if (status === "playing") {
+  if (editing) {
+    // エディタ中は矢印キーでカメラを動かす
+    const pan = 10 * dt;
+    if (keys.left) camX = Math.max(0, camX - pan);
+    if (keys.right) camX = Math.min(WORLD_W - W, camX + pan);
+    if (keys.jump) camY = Math.max(0, camY - pan);
+    if (keys.down) camY = Math.min(WORLD_H - H, camY + pan);
+  } else if (status === "playing") {
     timeMs += (now - (loop._p || now));
     levelTimeMs += (now - (loop._p || now));
     step(dt);
     $("hudTime").textContent = `⏱ ${fmtTime(timeMs)}`;
   }
   loop._p = now;
-  if (level) draw();
+  if (worldData) draw();
   requestAnimationFrame(loop);
 }
-loadLevel(0);
+loadWorld();
+applyI18n();
+// セーブがあれば「つづきから」を出す（中間ポイント・コイン・クリア済みのいずれか）
+if ((saveData.checkpoints || []).some(Boolean) || (saveData.coins || []).some(Boolean) || saveData.cleared) {
+  $("continueBtn").classList.remove("hidden");
+}
 status = "title";
 requestAnimationFrame(loop);
 
 // デバッグ用（読み取り専用）：テストが状態を見るための窓口
 window.__game = {
   get status() { return status; },
-  get level() { return levelIndex + 1; },
+  get area() { return areaIndex() + 1; },
   get world() { return world; },
   get x() { return player ? player.x : 0; },
   get y() { return player ? player.y : 0; },
   get coins() { return coinsGot; },
+  get coinsTotal() { return coinsTotal; },
   get deaths() { return deaths; },
   get onGround() { return player ? player.onGround : false; },
   get grav() { return gravDir; },
-  get grid() { return LEVELS[levelIndex].rows.slice(); },
-  get goalX() { return level ? level.goal.x : 0; },
-  get lifts() { return level ? level.lifts.map(l => ({ x: l.x, y: l.y, t: l.t })) : []; },
+  get camX() { return camX; },
+  get camY() { return camY; },
+  get worldW() { return WORLD_W; },
+  get worldH() { return WORLD_H; },
+  get goalX() { return worldData ? worldData.goal.x : 0; },
+  get goalY() { return worldData ? worldData.goal.y : 0; },
+  get lifts() { return worldData ? worldData.lifts.map(l => ({ x: l.x, y: l.y, t: l.t })) : []; },
+  get usedGravity() { return usedGravity; },
+  get checkpoints() { return worldData ? worldData.checkpoints.map(c => ({ x: c.x, y: c.y, active: c.active, name: c.name })) : []; },
+  get cleared() { return saveData.cleared; },
+  get lang() { return lang; },
+  // テスト用：ワールドをタイル文字の行配列で返す（ボットが経路判断に使う）
+  get grid() {
+    if (!worldData) return [];
+    const g = Array.from({ length: WORLD_ROWS }, () => Array(WORLD_COLS).fill("."));
+    for (const s of worldData.solids) g[Math.floor(s.y / TILE)][Math.floor(s.x / TILE)] = s.kind;
+    for (const s of worldData.spikes) g[Math.floor(s.y / TILE)][Math.floor(s.x / TILE)] = s.kind;
+    for (const c of worldData.coins) { if (!c.got) g[Math.floor(c.y / TILE)][Math.floor(c.x / TILE)] = "o"; }
+    for (const cp of worldData.checkpoints) g[Math.floor(cp.y / TILE)][Math.floor(cp.x / TILE)] = "C";
+    g[Math.floor(worldData.spawn.y / TILE)][Math.floor(worldData.spawn.x / TILE)] = "S";
+    g[Math.floor(worldData.goal.y / TILE)][Math.floor(worldData.goal.x / TILE)] = "G";
+    return g.map(r => r.join(""));
+  },
+  // テスト用：プレイヤーを指定座標へワープする（カメラも合わせる）
+  warp(x, y) {
+    if (!player) return;
+    player.x = x; player.y = y; player.vx = 0; player.vy = 0;
+    camX = Math.max(0, Math.min(player.x + player.w / 2 - W / 2, WORLD_W - W));
+    camY = Math.max(0, Math.min(player.y + player.h / 2 - H / 2, WORLD_H - H));
+  },
 };
 </script>
 </body>

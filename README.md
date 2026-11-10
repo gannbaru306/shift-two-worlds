@@ -19,9 +19,10 @@ on-screen buttons.
 | ↑ / Space / W | Jump |
 | Shift / X | Switch worlds |
 | Hold Shift (on a purple block) | Reverse gravity |
-| P | Pause |
-| R | Restart level |
+| P | Pause (with fast travel) |
+| R | Restart from checkpoint |
 | M | Mute |
+| E | Map editor (place blocks, C to copy) |
 
 ## Mechanics
 
@@ -33,11 +34,23 @@ on-screen buttons.
 - **Lifts** (orange) — they move up and down when you switch worlds.
   Ride one up to reach a high ledge.
 - **Spikes and pits** — touching spikes or falling off the stage costs a life.
-- **5 levels, 7 coins** — later levels combine all the mechanics.
+- **One seamless world, 9 coins** — five areas stitched into a single scrolling
+  world. Later areas combine all the mechanics.
+- **Checkpoints and fast travel** — touch a flag to set your respawn point.
+  From the pause screen you can warp to any checkpoint you have activated.
+- **Auto-save** — checkpoints, coins and best time are saved in your browser,
+  so you can continue where you left off.
+- **Hidden room** — after your first clear, a locked door in the ceiling opens
+  to a secret room with extra coins.
+- **No-gravity challenge** — clear the world without ever reversing gravity
+  to earn a crown. Collect every coin for the COIN MASTER title.
+- **Tutorial signs** — walk up to a signpost to see a hint.
+- **Map editor** — press E to place blocks and coins, and C to copy the world
+  data as JSON.
 - Best clear time is saved in your browser.
 
 ## About
 
 - Made for Game Off 2026. Submission deadline: December 1, 2026, 13:37 PST.
-- The in-game text is in Japanese.
+- The in-game text is in Japanese and English (toggle in the title screen or settings).
 - Single HTML file (`index.html`), everything inline.
